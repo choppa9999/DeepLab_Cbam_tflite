@@ -1,5 +1,4 @@
-# DeepLab_Cbam_tflite
-
+DeepLabV3+ with CBAM for Road Surface Segmentation
 1. 프로젝트 개요
 본 프로젝트는 DeepLabV3+ 아키텍처에 **CBAM (Convolutional Block Attention Module)**을 적용하여 도로 노면 상태(건조, 습윤, 슬러시 등)를 분할(Segmentation)하는 모델을 구현합니다.
 
