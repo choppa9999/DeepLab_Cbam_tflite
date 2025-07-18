@@ -1,5 +1,0 @@
-tensorflow
-Pillow
-matplotlib
-tqdm
-psutil
