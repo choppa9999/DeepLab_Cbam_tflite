@@ -45,7 +45,7 @@ python3 create_tfrecords_from_coco.py
 
 **1. 모델 학습**
 ```bash
-python3 main_cbam.py --mode train --batch_size 4 --epochs 100
+python3 main_cbam.py --mode train --batch 8 --epoch 100
 ```
 
 **2. TFLite 모델 생성**
