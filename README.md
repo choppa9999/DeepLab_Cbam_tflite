@@ -1,128 +1,81 @@
-# DeepLabV3+ with CBAM for Road Surface Segmentation
+# DeepLabV3+ with CBAM for Custom Dataset
 
-## 1. 프로젝트 개요
-본 프로젝트는 DeepLabV3+ 아키텍처에 **CBAM (Convolutional Block Attention Module)**을 적용하여 도로 표면을 분할(Segmentation)하는 모델을 구현합니다.
+이 프로젝트는 TensorFlow 2.x를 사용하여 **DeepLabV3+** 시맨틱 분할(Semantic Segmentation) 모델을 구현합니다. 특히, 모델의 헤드 부분에 **CBAM (Convolutional Block Attention Module)**을 적용하여 성능 향상을 시도하며, Roboflow에서 받은 **COCO 형식의 커스텀 데이터셋**을 학습시키는 전체 파이프라인을 제공합니다.
 
-학습된 모델은 TensorFlow Lite(.tflite) 형식으로 변환 및 양자화(INT8)하여, 모바일이나 임베디드 환경과 같은 리소스가 제한된 장치에서도 효율적으로 동작할 수 있도록 최적화하는 전체 파이프라인을 포함합니다.
+![결과 이미지 예시](https://i.imgur.com/YqEaW8A.png)
 
-## 2. 주요 기능
-- **DeepLabV3+ & CBAM**: 강력한 분할 성능을 자랑하는 DeepLabV3+ 모델에 어텐션 메커니즘(CBAM)을 추가하여 정확도를 향상시켰습니다.
-- **전이 학습 (Transfer Learning)**: ImageNet으로 사전 학습된 MobileNetV2 백본을 사용하여 더 빠르고 안정적으로 모델을 학습합니다.
-- **2단계 학습 전략**:
-    1. **특징 추출**: 백본을 동결하고 새로 추가된 분할 헤드만 학습합니다.
-    2. **미세 조정**: 전체 모델을 낮은 학습률로 추가 학습하여 성능을 극대화합니다.
-- **TFLite 변환 및 양자화**: 학습된 모델을 Float32 및 INT8 정수형 TFLite 모델로 변환하여, 모델의 크기를 줄이고 추론 속도를 높입니다.
-- **다양한 추론 결과 저장**: 오버레이, 비교 이미지 등 다양한 시각화 옵션을 제공합니다.
+## 주요 기능
 
-## 3. 파일 구조
-```bash
-├── checkpoints/
-│   └── best_model.keras
-├── data/
-│   └── tfrecords/
-├── exported_models/
-│   ├── Model/
-│   └── tflite_models/
-├── main_cbam.py
-├── inference_tflite.py
-├── create_tfrecords_from_coco.py
-├── deeplab_v3_plus_cbam.py
-├── segmentation_dataset.py
-├── requirements.txt
-└── README.md
-```
+* **DeepLabV3+ with CBAM**: MobileNetV2를 백본으로 사용하고, ASPP와 Decoder에 CBAM 어텐션 모듈을 적용한 모델
+* **커스텀 데이터셋 지원**: Roboflow COCO 형식의 데이터셋을 TFRecord로 자동 변환하여 학습
+* **다양한 실행 모드**: `train`, `eval`, `inference`, `export` 모드를 통해 학습, 평가, 추론, 배포용 모델 변환을 손쉽게 실행
+* **자동화된 설정**: 데이터셋의 이미지 수와 클래스 수를 자동으로 계산하여 설정 과정을 간소화
+* **편의 기능**:
+    * **다양한 결과 저장**: 추론 시 `--save_mode` 옵션을 통해 오버레이, 비교 이미지 등 다양한 형태로 결과 저장 가능
+    * **범례(Legend) 생성**: 추론 시 클래스별 색상 정보를 담은 범례 이미지를 결과물에 병합하여 생성
+    * **TensorBoard 안내**: 학습 시 TensorBoard 실행 명령어를 자동으로 안내
+    * **진행률 표시**: 여러 이미지를 추론할 때 진행 상황을 시각적으로 표시
+    * **혼합 정밀도 학습**: `--mixed_precision` 옵션으로 학습 속도 향상 및 메모리 사용량 절감 가능
+    * **학습 이어하기**: `--resume_training` 옵션으로 중단된 학습을 매끄럽게 이어갈 수 있음
 
-## 4. 환경 설정
-`requirements.txt` 파일을 사용하여 필요한 라이브러리를 설치합니다. `pycocotools`도 함께 설치합니다.
+---
+
+## 사전 준비 (Prerequisites)
+
+프로젝트 실행에 필요한 라이브러리들을 설치합니다. `requirements.txt` 파일을 사용하면 한 번에 설치할 수 있습니다.
 
 ```bash
 pip install -r requirements.txt
-pip install pycocotools
+```
+이 프로젝트는 **TensorFlow 2.15 이상** 버전에서 테스트되었습니다. `requirements.txt` 파일에는 CPU 버전의 TensorFlow가 포함되어 있습니다. GPU를 사용하려면, 해당 파일의 `tensorflow` 라인을 주석 처리하고 사용 환경에 맞는 TensorFlow GPU 버전을 직접 설치해주세요.
+
+---
+
+## 사용 방법
+
+### Step 1: 데이터셋 변환 (COCO → TFRecord)
+
+`create_tfrecords_from_coco.py` 파일을 열고, 스크립트 상단에 있는 경로 변수를 자신의 환경에 맞게 수정한 후 실행합니다.
+
+```bash
+python3 create_tfrecords_from_coco.py
 ```
 
-## 5. 전체 워크플로우
+### Step 2: 모델 학습 및 내보내기
 
-### 1단계: 데이터 다운로드
-1. **Roboflow**와 같은 플랫폼을 사용하여 이미지에 대한 분할(Segmentation) 주석(Annotation) 작업을 수행합니다.
-2. 주석 작업이 완료되면, 데이터를 **COCO Segmentation** 형식으로 내보내기(Export)하여 다운로드합니다.
-3. 다운로드한 데이터의 압축을 풀고, 아래와 같이 프로젝트 내에 폴더를 구성합니다.
-    ```bash
-    ./data/coco/
-    ├── train/
-    │   ├── _annotations.coco.json
-    │   └── (학습용 이미지들).jpg
-    └── valid/
-        ├── _annotations.coco.json
-        └── (검증용 이미지들).jpg
-    ```
+`main_cbam.py` 스크립트를 사용하여 모델을 학습하고, 라즈베리 파이에서 사용할 `.tflite` 모델을 생성합니다.
 
-### 2단계: 데이터 변환 (COCO to TFRecord)
-다운로드한 COCO 형식의 데이터셋을 모델 학습에 효율적인 TFRecord 형식으로 변환합니다.
+**1. 모델 학습**
+```bash
+python3 main_cbam.py --mode train --batch_size 4 --epochs 100
+```
 
-1.  **`create_tfrecords_from_coco.py` 스크립트 수정**:
-    파일을 열어 상단의 `DATA_SPLITS` 딕셔너리에 있는 경로들을 자신의 환경에 맞게 수정합니다.
-    ```python
-    # 예시
-    DATA_SPLITS = {
-        'train': {
-            'json_path': './data/coco/train/_annotations.coco.json',
-            'image_dir': './data/coco/train'
-        },
-        'valid': {
-            'json_path': './data/coco/valid/_annotations.coco.json',
-            'image_dir': './data/coco/valid'
-        },
-    }
-    OUTPUT_DIR = './data/tfrecords'
-    ```
+**2. TFLite 모델 생성**
+학습이 완료되면, 아래 명령어를 실행하여 배포용 모델(`.tflite`)을 생성합니다.
+```bash
+# 양자화 없이 정확도가 높은 Float32 TFLite 모델 생성 (디버깅용)
+python3 main_cbam.py --mode export --no_quant
 
-2.  **변환 스크립트 실행**:
-    터미널에서 아래 명령어를 실행하여 변환을 시작합니다.
-    ```bash
-    python create_tfrecords_from_coco.py
-    ```
-    변환이 완료되면 `OUTPUT_DIR`로 지정한 폴더(예: `./data/tfrecords/`) 안에 `images-train-*.tfrecord`와 `images-valid-*.tfrecord` 파일들이 생성됩니다.
+# 라즈베리 파이 배포를 위한 INT8 양자화 모델 생성
+python3 main_cbam.py --mode export
+```
+* 실행하면 `exported_models/tflite_models/` 폴더 안에 `.tflite` 파일이 생성됩니다.
 
-### 3단계: 모델 학습 (train 모드)
-TFRecord로 변환된 데이터셋을 사용하여 모델을 학습합니다.
+### Step 3: 라즈베리 파이에서 추론 실행 (Inference)
 
-- **실행 명령어**:
-    ```bash
-    python main_cbam.py --mode train --epoch 50 --initial_epochs 10 --batch 8
-    ```
-- **주요 인자**:
-    - `--epoch`: 전체 학습 에포크 수 (기본값: 50)
-    - `--initial_epochs`: 1단계(특징 추출)에 사용할 에포크 수 (기본값: 10)
-    - `--batch`: 배치 크기 (기본값: 8)
-    - `--learning_rate`: 초기 학습률 (기본값: 1e-3)
-    - `--resume_training`: `./checkpoints/best_model.keras`에서 학습을 이어서 진행합니다.
-    - `--no_transfer`: 전이 학습을 사용하지 않고 처음부터 학습합니다.
+이제 가벼워진 `inference_tflite.py`와 `.tflite` 모델을 사용하여 라즈베리 파이에서 추론을 실행합니다.
 
-### 4단계: 모델 내보내기 (export 모드)
-학습된 `.keras` 모델을 `SavedModel`, `Float32 TFLite`, `INT8 TFLite` 형식으로 모두 변환합니다.
+```bash
+python3 inference_tflite.py --model ./exported_models/tflite_models/labeling_cbam_quant.tflite \
+                            --input /path/to/your/images \
+                            --output ./results \
+                            --save_mode all
+```
 
-- **실행 명령어**:
-    ```bash
-    python main_cbam.py --mode export
-    ```
-
-### 5단계: 모델 추론 (inference_tflite.py)
-내보낸 `.tflite` 파일을 사용하여 이미지 분할을 수행하고 성능을 확인합니다.
-
-- **실행 명령어**:
-    ```bash
-    # 예시: INT8 양자화 모델 사용
-    python inference_tflite.py \
-      --model_path ./exported_models/tflite_models/Model_quant.tflite \
-      --input_path ./test_images \
-      --output_dir ./tflite_results \
-      --save_mode comparison
-    ```
-- **주요 인자**:
-    - `--model_path`: 사용할 `.tflite` 모델 파일의 경로 (**필수**)
-    - `--input_path`: 추론할 이미지 또는 폴더 경로 (**필수**)
-    - `--output_dir`: 결과 이미지를 저장할 폴더 경로 (**필수**)
-    - `--save_mode`: 결과 저장 방식 (기본값: `overlay`)
-        - `overlay`: 원본 이미지에 마스크를 겹쳐서 저장
-        - `comparison`: 원본, 마스크, 오버레이 이미지를 나란히 붙여서 저장
-        - `all`: `overlay`와 `comparison` 결과를 모두 저장
+* `--model`: **Step 2에서 생성한 `.tflite` 파일**의 경로를 지정합니다.
+* `--input`: 추론할 단일 이미지 파일 또는 이미지들이 들어있는 폴더 경로
+* `--output`: 결과 이미지가 저장될 폴더 경로
+* **`--save_mode`**: 결과 저장 방식을 선택합니다.
+    * `overlay` (기본값): 오버레이 이미지와 범례를 합친 최종 결과만 저장합니다.
+    * `comparison`: 원본, 마스크, 오버레이 이미지와 범례를 가로로 합친 비교 이미지를 저장합니다.
+    * `all`: `overlay`와 `comparison` 방식의 모든 결과물을 저장합니다.
