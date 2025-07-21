@@ -2,8 +2,6 @@
 
 이 프로젝트는 TensorFlow 2.x를 사용하여 **DeepLabV3+** 시맨틱 분할(Semantic Segmentation) 모델을 구현합니다. 특히, 모델의 헤드 부분에 **CBAM (Convolutional Block Attention Module)**을 적용하여 성능 향상을 시도하며, Roboflow에서 받은 **COCO 형식의 커스텀 데이터셋**을 학습시키는 전체 파이프라인을 제공합니다.
 
-![결과 이미지 예시](https://i.imgur.com/YqEaW8A.png)
-
 ## 주요 기능
 
 * **DeepLabV3+ with CBAM**: MobileNetV2를 백본으로 사용하고, ASPP와 Decoder에 CBAM 어텐션 모듈을 적용한 모델
