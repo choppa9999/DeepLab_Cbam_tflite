@@ -1,5 +1,4 @@
-tflite-runtime
 numpy
 Pillow
 tqdm
-tensorflow # tf.image.resize 등을 사용하기 위해 필요
+tensorflow
